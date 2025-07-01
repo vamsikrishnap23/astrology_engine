@@ -4,7 +4,7 @@ import base64
 import os
 from streamlit.components.v1 import html
 import swisseph as swe
-import tempfile
+import importlib
 
 from astro_core.chart_logic import (
     compute_planets_in_varga,
@@ -47,8 +47,11 @@ def jd_to_date(jd):
 
 # -------------------- Main Processing --------------------
 if submitted:
-    import importlib
+    # Create charts folder if not exists
+    charts_folder = "charts"
+    os.makedirs(charts_folder, exist_ok=True)
 
+    # List of Vargas to generate
     varga_list = [
         (1, "D1 (Rāśi)"),
         (2, "D2 (Hora)"),
@@ -60,7 +63,6 @@ if submitted:
         (12, "D12 (Dwadashamsha)"),
         (16, "D16 (Shodashamsha)"),
         (20, "D20 (Vimshamsha)"),
-        (24, "D24 (Chaturvimshamsha)"),
         (27, "D27 (Bhamsha)"),
         (30, "D30 (Trimsamsha)"),
         (40, "D40 (Khavedamsha)"),
@@ -78,13 +80,15 @@ if submitted:
             date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num
         )
 
-        # Robust ascendant lookup
+        # Ascendant sign lookup
         asc_sign_num = next((sign for sign, pl in planets_in_sign.items() if "Ascendant" in pl), None)
         if not asc_sign_num:
             st.error("Ascendant not found in chart data.")
             continue
+
         asc_sign = sign_labels.get(((asc_sign_num - 1) % 12) + 1, sign_labels[1])
 
+        # Chart creation
         import jyotichart
         importlib.reload(jyotichart)
         import jyotichart as chart
@@ -109,25 +113,19 @@ if submitted:
 
         mychart.updatechartcfg(aspect=False)
 
-        with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as tmp_svg:
-            svg_filename = tmp_svg.name
-        mychart.draw(os.path.dirname(svg_filename), os.path.splitext(os.path.basename(svg_filename))[0], "svg")
+        # Save chart permanently to charts folder
+        chart_filename = f"{charts_folder}/{varga_label.replace(' ', '_').replace('(', '').replace(')', '')}_{name.replace(' ', '_')}.svg"
+        mychart.draw(os.path.dirname(chart_filename), os.path.splitext(os.path.basename(chart_filename))[0], "svg")
 
-        if os.path.exists(svg_filename):
-            with open(svg_filename, "rb") as f:
+        # Display SVG
+        if os.path.exists(chart_filename):
+            with open(chart_filename, "rb") as f:
                 svg_bytes = f.read()
-                try:
-                    svg_data = svg_bytes.decode("utf-8")
-                except UnicodeDecodeError:
-                    try:
-                        svg_data = svg_bytes.decode("utf-16")
-                    except UnicodeDecodeError:
-                        svg_data = svg_bytes.decode("latin-1")
-                b64 = base64.b64encode(svg_data.encode('utf-8')).decode()
-                html(f'<embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="500" height="500">', height=550)
-            os.remove(svg_filename)
+            b64 = base64.b64encode(svg_bytes).decode()
+            html(f'<embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="500" height="500">', height=550)
         else:
-            st.error(f"Could not find SVG file: {svg_filename}")
+            st.error(f"Could not find SVG file: {chart_filename}")
+
     # -------------------- Planet Table --------------------
     st.markdown("## గ్రహ స్థితి పట్టిక")
     planetary_info = compute_planetary_info_telugu(
