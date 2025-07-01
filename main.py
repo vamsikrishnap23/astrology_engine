@@ -24,7 +24,7 @@ st.title("🪐 Jyotish Engine")
 with st.form("input_form"):
     col1, col2 = st.columns(2)
     with col1:
-        name = st.text_input("Name", "Test User")
+        name = st.text_input("Name", "Vamsi")
         date = st.date_input("Date of Birth", datetime.date(2005, 11, 23), min_value=datetime.date(1900,1,1), max_value=datetime.date(2200,1,1))
         hour = st.number_input("Hour (24h)", 0, 23, 15)
         minute = st.number_input("Minute", 0, 59, 35)

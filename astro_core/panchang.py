@@ -135,8 +135,8 @@ def get_panchang_minimal(jd, lat, lon, tz_offset):
     vara_name = VARA_NAMES[weekday_num]
 
     return {
-        "Nakshatram": f"{nak_name} ({nak_num+1})",
+        "Nakshatram": f"{nak_name}",
         "Padam": pada,
-        "Rasi": f"{rasi_name} ({rasi_num+1})",
-        "Vaaram": f"{vara_name} ({weekday_num+1})"
+        "Rasi": f"{rasi_name}",
+        "Vaaram": f"{vara_name}"
     }
