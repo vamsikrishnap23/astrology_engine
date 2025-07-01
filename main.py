@@ -5,6 +5,7 @@ import os
 from streamlit.components.v1 import html
 import swisseph as swe
 import importlib
+import pandas as pd
 
 from astro_core.chart_logic import (
     compute_planets_in_varga,
@@ -52,12 +53,13 @@ if submitted:
     panchang = get_panchang_minimal(jd, lat, lon, tz)
 
     st.markdown("## 🗓️ పంచాంగం (Panchang)")
-    st.table([
-        {"Property": "Nakshatram", "Value": panchang["Nakshatram"]},
-        {"Property": "Padam", "Value": panchang["Padam"]},
-        {"Property": "Rasi", "Value": panchang["Rasi"]},
-        {"Property": "Vaaram", "Value": panchang["Vaaram"]},
+    panchang_df = pd.DataFrame([
+    {"Property": "Nakshatram", "Value": str(panchang["Nakshatram"])},
+    {"Property": "Padam", "Value": str(panchang["Padam"])},
+    {"Property": "Rasi", "Value": str(panchang["Rasi"])},
+    {"Property": "Vaaram", "Value": str(panchang["Vaaram"])},
     ])
+    st.table(panchang_df)
 
 
 
@@ -181,4 +183,4 @@ if submitted:
                 "ప్రారంభం": jd_to_date(antar["start_jd"]).strftime("%Y-%m-%d"),
                 "ముగింపు": jd_to_date(antar["end_jd"]).strftime("%Y-%m-%d")
             })
-        st.table(antar_table)
+        st.table(pd.DataFrame(antar_table).astype(str))
