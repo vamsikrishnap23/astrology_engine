@@ -1,6 +1,7 @@
 import swisseph as swe
-from .constants import PLANETS
-from .calculations import get_julian_day, get_ayanamsa
+
+from .constants import PLANETS, TELUGU_SIGNS, SIGN_NAMES
+from .calculations import get_julian_day, get_rasi, get_ascendant, get_tropical_ascendant, get_ayanamsa
 
 def _is_odd_sign(sign):  # sign: 0-based (0=Aries)
     return sign % 2 == 0
@@ -129,8 +130,7 @@ def compute_planets_in_varga(year, month, day, hour, minute, second, lat, lon, t
     sign = ((sign - 1) % 12) + 1
     planet_signs[sign].append('Ketu')
 
-    # Ascendant
-    tropical_asc = swe.houses_ex(jd, lat, lon, b'P', flag)[1][0]
+    tropical_asc = get_tropical_ascendant(jd, lat, lon)
     ayanamsa = get_ayanamsa(jd)
     sidereal_asc = (tropical_asc - ayanamsa) % 360
     varga_long = get_varga_longitude(sidereal_asc, varga_num) % 360
@@ -140,6 +140,61 @@ def compute_planets_in_varga(year, month, day, hour, minute, second, lat, lon, t
 
     return planet_signs
 
+def compute_planets_in_bhava(year, month, day, hour, minute, second, lat, lon, tz_offset):
+    swe.set_sid_mode(swe.SIDM_LAHIRI)
+    jd = get_julian_day(year, month, day, hour, minute, second, tz_offset)
+    ayanamsa = get_ayanamsa(jd)
+
+    flag = swe.FLG_SIDEREAL | swe.FLG_SWIEPH
+    hsys = b'P'
+
+    cusps, ascmc = swe.houses_ex(jd, lat, lon, hsys, flag)
+    if len(cusps) < 12:
+        hsys = b'E'
+        cusps, ascmc = swe.houses_ex(jd, lat, lon, hsys, flag)
+        if len(cusps) < 12:
+            raise ValueError(f"House cusps calculation failed, got {len(cusps)} cusps even with equal house system.")
+
+    sidereal_cusps = [(c - ayanamsa) % 360 for c in cusps[0:12]]
+
+    house_boundaries = []
+    for i in range(12):
+        start = sidereal_cusps[i]
+        end = sidereal_cusps[(i + 1) % 12]
+        house_boundaries.append((start, end))
+
+    house_planets = {i+1: [] for i in range(12)}
+    house_planets[1].append("Ascendant")
+
+    for planet, pid in PLANETS.items():
+        lon_arr, _ = swe.calc_ut(jd, pid, flag)
+        plon = lon_arr[0] % 360
+        for i, (start, end) in enumerate(house_boundaries):
+            if start < end:
+                if start <= plon < end:
+                    house_planets[i+1].append(planet)
+                    break
+            else:
+                if plon >= start or plon < end:
+                    house_planets[i+1].append(planet)
+                    break
+
+    rahu_arr, _ = swe.calc_ut(jd, swe.MEAN_NODE, flag)
+    rahu_lon = rahu_arr[0] % 360
+    ketu_lon = (rahu_lon + 180) % 360
+    for planet, plon in [("Rahu", rahu_lon), ("Ketu", ketu_lon)]:
+        for i, (start, end) in enumerate(house_boundaries):
+            if start < end:
+                if start <= plon < end:
+                    house_planets[i+1].append(planet)
+                    break
+            else:
+                if plon >= start or plon < end:
+                    house_planets[i+1].append(planet)
+                    break
+
+    return house_planets
+
 def compute_planets_in_sign(year, month, day, hour, minute, second, lat, lon, tz_offset):
     return compute_planets_in_varga(year, month, day, hour, minute, second, lat, lon, tz_offset, varga_num=1)
 
@@ -147,5 +202,5 @@ def compute_planets_in_d9(year, month, day, hour, minute, second, lat, lon, tz_o
     return compute_planets_in_varga(year, month, day, hour, minute, second, lat, lon, tz_offset, varga_num=9)
 
 def get_sign_labels(language="English"):
-    from .constants import SIGN_NAMES, TELUGU_SIGNS
     return SIGN_NAMES if language == "English" else TELUGU_SIGNS
+
