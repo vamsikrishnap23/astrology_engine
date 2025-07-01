@@ -14,6 +14,7 @@ from astro_core.planetary_info import compute_planetary_info_telugu
 from astro_core.constants import TELUGU_PLANETS
 from astro_core.vimshottari_dashas import compute_vimsottari_dashas
 from astro_core.calculations import get_julian_day
+from astro_core.panchang import get_panchang_minimal
 
 # -------------------- Streamlit Config --------------------
 st.set_page_config(page_title="Jyotish Engine", layout="centered")
@@ -24,7 +25,7 @@ with st.form("input_form"):
     col1, col2 = st.columns(2)
     with col1:
         name = st.text_input("Name", "Test User")
-        date = st.date_input("Date of Birth", datetime.date(2005, 11, 23))
+        date = st.date_input("Date of Birth", datetime.date(2005, 11, 23), min_value=datetime.date(1900,1,1), max_value=datetime.date(2200,1,1))
         hour = st.number_input("Hour (24h)", 0, 23, 15)
         minute = st.number_input("Minute", 0, 59, 35)
         second = st.number_input("Second", 0, 59, 0)
@@ -44,6 +45,22 @@ def jd_to_date(jd):
     mm = int((total_seconds % 3600) // 60)
     ss = int(total_seconds % 60)
     return datetime.datetime(y, m, d, min(hh, 23), min(mm, 59), min(ss, 59))
+
+# --- Panchang Section ---
+if submitted:
+    jd = get_julian_day(date.year, date.month, date.day, hour, minute, second, tz)
+    panchang = get_panchang_minimal(jd, lat, lon, tz)
+
+    st.markdown("## 🗓️ పంచాంగం (Panchang)")
+    st.table([
+        {"Property": "Nakshatram", "Value": panchang["Nakshatram"]},
+        {"Property": "Padam", "Value": panchang["Padam"]},
+        {"Property": "Rasi", "Value": panchang["Rasi"]},
+        {"Property": "Vaaram", "Value": panchang["Vaaram"]},
+    ])
+
+
+
 
 # -------------------- Main Processing --------------------
 if submitted:
