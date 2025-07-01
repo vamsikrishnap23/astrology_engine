@@ -276,7 +276,6 @@ def get_pada(longitude):
     return int((longitude % (360 / 27)) // (360 / 108)) + 1
 
 def compute_planetary_info_telugu(year, month, day, hour, minute, second, lat, lon, tz_offset):
-    import swisseph as swe
     swe.set_sid_mode(swe.SIDM_LAHIRI)
     jd = get_julian_day(year, month, day, hour, minute, second, tz_offset)
     flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
@@ -310,6 +309,7 @@ def compute_planetary_info_telugu(year, month, day, hour, minute, second, lat, l
         nakshatra = get_nakshatra(longitude)
         pada = get_pada(longitude)
         # Retrograde logic per Maitreya:
+        # Sun, Moon: never retrograde; Rahu/Ketu: always retrograde; others: speed < 0
         if planet in ["Sun", "Moon"]:
             retro = False
         else:
