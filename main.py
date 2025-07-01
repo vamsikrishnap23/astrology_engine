@@ -5,6 +5,8 @@ import os
 from streamlit.components.v1 import html
 import swisseph as swe
 import importlib
+import matplotlib.pyplot as plt
+import seaborn as sns
 import pandas as pd
 
 from astro_core.chart_logic import (
@@ -16,6 +18,7 @@ from astro_core.constants import TELUGU_PLANETS
 from astro_core.vimshottari_dashas import compute_vimsottari_dashas
 from astro_core.calculations import get_julian_day
 from astro_core.panchang import get_panchang_minimal
+from astro_core.shad_bala import compute_shadbala
 
 # -------------------- Streamlit Config --------------------
 st.set_page_config(page_title="Jyotish Engine", layout="centered")
@@ -184,3 +187,56 @@ if submitted:
                 "ముగింపు": jd_to_date(antar["end_jd"]).strftime("%Y-%m-%d")
             })
         st.table(pd.DataFrame(antar_table).astype(str))
+
+    # -------------------- Shadbala --------------------
+    def get_chart_data_stub(planet_name):
+        # Stubbed version; you'll replace with real chart logic.
+        # You already calculate many of these values inside your system.
+        raise NotImplementedError("You need to hook this to your actual planetary data logic.")
+
+    st.markdown("## 🔯 శడ్బల పట్టిక (Shadbala Table)")
+
+    try:
+        shadbala_data = compute_shadbala(jd_birth, lat, lon, tz, get_chart_data_stub)
+        shadbala_df = pd.DataFrame([
+            {
+                "Planet": planet,
+                "Sthana": round(data["Sthana"], 2),
+                "Dig": round(data["Dig"], 2),
+                "Kala": round(data["Kala"], 2),
+                "Cheshta": round(data["Cheshta"], 2),
+                "Naisargika": round(data["Naisargika"], 2),
+                "Drik": round(data["Drik"], 2),
+                "Total": round(data["Total"], 2),
+                "Required": round(data["Required"], 2),
+                "Percent": f'{data["Percent"]}%'
+            }
+            for planet, data in shadbala_data.items()
+        ])
+        st.dataframe(shadbala_df)
+
+        # -------------------- Shadbala Bar Chart --------------------
+        st.markdown("### 📊 Shadbala Total vs Required (Virupa Strength)")
+        plt.figure(figsize=(10, 5))
+        sns.barplot(
+            data=shadbala_df,
+            x="Planet",
+            y="Total",
+            color='green',
+            label="Total Bala"
+        )
+        sns.barplot(
+            data=shadbala_df,
+            x="Planet",
+            y="Required",
+            color='red',
+            alpha=0.5,
+            label="Required Bala"
+        )
+        plt.ylabel("Virupas")
+        plt.title("Shadbala Total vs Required")
+        plt.legend()
+        st.pyplot(plt.gcf())
+    except NotImplementedError as e:
+        st.warning("Shadbala not computed: " + str(e))
+
