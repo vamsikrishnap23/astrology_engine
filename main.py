@@ -20,9 +20,8 @@ from astro_core.calculations import get_julian_day
 from astro_core.panchang import get_panchang_minimal
 from astro_core.shadbala import compute_shadbala
 
-
 st.set_page_config(page_title="Jyotish Engine", layout="centered")
-st.title("🚰 Jyotish Engine")
+st.title("Jyotish Engine")
 
 with st.form("input_form"):
     col1, col2 = st.columns(2)
@@ -151,74 +150,49 @@ if submitted:
             })
         st.table(pd.DataFrame(antar_table).astype(str))
 
-    st.markdown("## 🔯 శడ్బల పట్టిక (Shadbala Table)")
+    from astro_core.ashtakavarga import ashtakavarga_chart, PLANET_NAMES, SIGN_NAMES, PLANET_INDEXES
 
+    st.markdown("## అష్టకవర్గ పట్టిక (Ashtakavarga Chart)")
 
-    def get_chart_data(planet_name):
-        # Handle meta case
-        if planet_name == "meta":
-            return {
-                "jd": jd_birth,
-                "sunrise": panchang.get("sunrise", 0),
-                "sunset": panchang.get("sunset", 0),
-                "day_birth": True,
-                "lmt": (jd_birth - int(jd_birth)) * 24,
-                "location": (lat, lon)
-            }
-
-        # Map integer index to planet name
-        planet_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
-        planet_str = planet_names[planet_name] if isinstance(planet_name, int) else planet_name
-
+    # Step 1: Extract planetary longitudes from planetary_info
+    planet_longitudes = {}
+    for idx, planet_name in enumerate(PLANET_NAMES):
         for p in planetary_info:
-            if p["planet"] == planet_str:
-                return {
-                    "vedic_longitude": float(p["degrees"]),
-                    "tropical_longitude": float(p["degrees"]),  # adjust if different
-                    "latitude": 0.0,  # placeholder
-                    "speed": 1.0,     # placeholder
-                    "varga": {
-                        0: 15, 1: 15, 2: 15, 3: 15, 4: 15, 5: 15, 6: 15  # mock values
-                    }
-                }
+            if p["planet"] == planet_name:
+                planet_longitudes[idx] = float(p["degrees"])
+                break
 
-        # Default fallback
-        return {
-            "vedic_longitude": 0.0,
-            "tropical_longitude": 0.0,
-            "latitude": 0.0,
-            "speed": 0.0,
-            "varga": {}
-        }
-
-
+    # Step 2: Compute Ashtakavarga chart
     try:
-        shadbala_data = compute_shadbala(jd_birth, lat, lon, tz, get_chart_data, date, hour, minute, second)
-        shadbala_df = pd.DataFrame([
-            {
-                "Planet": planet,
-                "Sthana": round(data["Sthana"], 2),
-                "Dig": round(data["Dig"], 2),
-                "Kala": round(data["Kala"], 2),
-                "Cheshta": round(data["Cheshta"], 2),
-                "Naisargika": round(data["Naisargika"], 2),
-                "Drik": round(data["Drik"], 2),
-                "Total": round(data["Total"], 2),
-                "Required": round(data["Required"], 2),
-                "Percent": f'{data["Percent"]}%'
-            }
-            for planet, data in shadbala_data.items()
-        ])
-        st.dataframe(shadbala_df)
+        chart = ashtakavarga_chart(planet_longitudes)
+        bav = chart["bhinna"]
+        sarva = chart["sarva"]
 
-        st.markdown("### 📊 Shadbala Total vs Required (Virupa Strength)")
-        plt.figure(figsize=(10, 5))
-        sns.barplot(data=shadbala_df, x="Planet", y="Total", color='green', label="Total Bala")
-        sns.barplot(data=shadbala_df, x="Planet", y="Required", color='red', alpha=0.5, label="Required Bala")
-        plt.ylabel("Virupas")
-        plt.title("Shadbala Total vs Required")
-        plt.legend()
+        # Step 3A: Display Bhinna Ashtakavarga as DataFrame
+        bav_df = pd.DataFrame(
+            [[bav[p][s] for s in range(12)] for p in PLANET_INDEXES],
+            index=PLANET_NAMES,
+            columns=SIGN_NAMES
+        )
+        st.markdown("### భిన్న అష్టకవర్గ (Bhinna Ashtakavarga)")
+        st.dataframe(bav_df.style.format("{:d}"))
+
+        # Step 3B: Display Sarva Ashtakavarga
+        sarva_df = pd.DataFrame({
+            "Sign": SIGN_NAMES,
+            "Bindus": sarva
+        })
+        st.markdown("### 🔆 సర్వ అష్టకవర్గ (Sarva Ashtakavarga)")
+        st.dataframe(sarva_df)
+
+        # Optional: Bar chart for Sarva Ashtakavarga
+        st.markdown("### Sarva Ashtakavarga Bindus per Sign")
+        plt.figure(figsize=(10, 4))
+        sns.barplot(data=sarva_df, x="Sign", y="Bindus", palette="viridis")
+        plt.ylabel("Bindus")
+        plt.xticks(rotation=45)
+        plt.title("Sarva Ashtakavarga")
         st.pyplot(plt.gcf())
 
     except Exception as e:
-        st.warning("Shadbala not computed: " + str(e))
+        st.warning("Ashtakavarga computation failed: " + str(e))
