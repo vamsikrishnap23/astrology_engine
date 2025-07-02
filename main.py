@@ -5,8 +5,6 @@ import os
 from streamlit.components.v1 import html
 import swisseph as swe
 import importlib
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 
 from astro_core.chart_logic import (
@@ -21,7 +19,7 @@ from astro_core.panchang import get_panchang_minimal
 from astro_core.shadbala import compute_shadbala
 
 # Import Ashtakavarga logic
-from astro_core.ashtakavarga import Ashtakavarga, OSUN, OMOON, OMERCURY, OVENUS, OMARS, OJUPITER, OSATURN, OASCENDANT, REKHA, TRIKONA, EKADHI
+from astro_core.ashtakavarga import Ashtakavarga, OSUN, OMOON, OMERCURY, OVENUS, OMARS, OJUPITER, OSATURN, OASCENDANT, REKHA
 
 st.set_page_config(page_title="Jyotish Engine", layout="centered")
 st.title("Jyotish Engine")
@@ -51,10 +49,6 @@ def jd_to_date(jd):
     return datetime.datetime(y, m, d, min(hh, 23), min(mm, 59), min(ss, 59))
 
 def get_rasi_for_ashtakavarga(planets_in_sign):
-    """
-    Returns a function that maps planet index (0=Sun, ..., 6=Saturn, 7=Ascendant)
-    to its rasi (0=Aries, ..., 11=Pisces) for Ashtakavarga calculation.
-    """
     planet_order = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Ascendant"]
     planet_signs = [None] * 8
     for sign_num, planets in planets_in_sign.items():
@@ -64,25 +58,46 @@ def get_rasi_for_ashtakavarga(planets_in_sign):
                 planet_signs[idx] = (sign_num - 1) % 12
             elif planet == "Ascendant":
                 planet_signs[7] = (sign_num - 1) % 12
-    # Fallback: if Ascendant not found, set to Aries
     if planet_signs[7] is None:
         planet_signs[7] = 0
     def get_rasi(planet_idx):
         return planet_signs[planet_idx]
     return get_rasi
 
-def ashtakavarga_table(ashta, typ, planet_labels, sign_labels):
+def ashtakavarga_rekha_table(ashta, planet_labels, sign_labels):
     data = []
-    for pidx in range(8):
+    for pidx in range(7):  # Only Sun to Saturn (not Ascendant)
         row = [planet_labels[pidx]]
         for rasi in range(12):
-            row.append(ashta.getItem(typ, pidx, rasi))
+            row.append(ashta.getItem(REKHA, pidx, rasi))
         data.append(row)
     df = pd.DataFrame(data, columns=["Planet"] + [sign_labels[i] for i in range(12)])
-    # Add Sarva row
-    sarva = ["Sarva"] + [ashta.getSarva(typ, rasi) for rasi in range(12)]
+    # Add Sarva row (sum of Sun–Saturn only)
+    sarva = ["Sarva"] + [sum(ashta.getItem(REKHA, pidx, rasi) for pidx in range(7)) for rasi in range(12)]
     df.loc[len(df)] = sarva
     return df
+
+def sarva_ashtakavarga_svg_chart(sarva, sign_labels, asc_sign_num, name, folder, filename):
+    """
+    Draws a South Indian style chart with Sarva values using jyotichart.
+    - sarva: list of 12 integers (Sarva for each sign, Aries=0)
+    - sign_labels: list of sign names (1-based)
+    - asc_sign_num: 1-based sign number for Ascendant
+    - name: chart owner name
+    - folder: output folder
+    - filename: file name (without extension)
+    """
+    import jyotichart
+    importlib.reload(jyotichart)
+    chart = jyotichart.SouthChart("Sarva Ashtakavarga Chart", name, IsFullChart=True)
+    # Place Sarva values as "planets" in each sign
+    for sign_num in range(1, 13):
+        value = sarva[sign_num - 1]
+        label = str(value)
+        chart.add_planet(label, label, sign_num)
+    chart.set_ascendantsign(sign_labels[asc_sign_num])
+    chart.updatechartcfg(aspect=False)
+    chart.draw(folder, filename, "svg")
 
 if submitted:
     jd = get_julian_day(date.year, date.month, date.day, hour, minute, second, tz)
@@ -157,27 +172,39 @@ if submitted:
 
         # ---- Ashtakavarga: Only for D1 (Rāśi) ----
         if varga_num == 1:
-            st.markdown("### Ashtakavarga (Rekha, Trikona, Ekadhipatya) for D1 (Rāśi) Chart")
-
+            st.markdown("### Ashtakavarga (Rekha, Sarva) for D1 (Rāśi) Chart")
             get_rasi = get_rasi_for_ashtakavarga(planets_in_sign)
             ashta = Ashtakavarga(get_rasi)
             ashta.update()
 
-            planet_labels = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Ascendant"]
+            planet_labels = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"]
             sign_labels_row = [sign_labels[i+1] for i in range(12)]  # sign_labels is 1-based
 
-            rekha_df = ashtakavarga_table(ashta, REKHA, planet_labels, sign_labels_row)
-            trikona_df = ashtakavarga_table(ashta, TRIKONA, planet_labels, sign_labels_row)
-            ekadhi_df = ashtakavarga_table(ashta, EKADHI, planet_labels, sign_labels_row)
-
-            st.markdown("#### Rekha Table")
+            rekha_df = ashtakavarga_rekha_table(ashta, planet_labels, sign_labels_row)
+            st.markdown("#### Rekha Table (Binna Ashtakavarga)")
             st.dataframe(rekha_df, use_container_width=True)
 
-            st.markdown("#### Trikona Shodhana Table")
-            st.dataframe(trikona_df, use_container_width=True)
+            # Sarva calculation: sum of Sun–Saturn only (not Ascendant)
+            sarva = [sum(ashta.getItem(REKHA, pidx, rasi) for pidx in range(7)) for rasi in range(12)]
 
-            st.markdown("#### Ekadhipatya Shodhana Table")
-            st.dataframe(ekadhi_df, use_container_width=True)
+            # Draw Sarva Ashtakavarga chart as SVG with Sarva values as labels
+            sarva_chart_filename = f"{charts_folder}/Sarva_Ashtakavarga_{name.replace(' ', '_')}.svg"
+            sarva_ashtakavarga_svg_chart(
+                sarva=sarva,
+                sign_labels=sign_labels,
+                asc_sign_num=asc_sign_num,
+                name=name,
+                folder=charts_folder,
+                filename=f"Sarva_Ashtakavarga_{name.replace(' ', '_')}"
+            )
+            if os.path.exists(sarva_chart_filename):
+                with open(sarva_chart_filename, "rb") as f:
+                    svg_bytes = f.read()
+                b64 = base64.b64encode(svg_bytes).decode()
+                st.markdown("#### Sarva Ashtakavarga Chart (South Indian Style)")
+                html(f'<embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="500" height="500">', height=550)
+            else:
+                st.error(f"Could not find SVG file: {sarva_chart_filename}")
 
     st.markdown("## గ్రహ స్థితి పట్టిక")
     planetary_info = compute_planetary_info_telugu(date.year, date.month, date.day, hour, minute, second, lat, lon, tz)
