@@ -18,13 +18,12 @@ from astro_core.constants import TELUGU_PLANETS
 from astro_core.vimshottari_dashas import compute_vimsottari_dashas
 from astro_core.calculations import get_julian_day
 from astro_core.panchang import get_panchang_minimal
-from astro_core.shad_bala import compute_shadbala
+from astro_core.shadbala import compute_shadbala
 
-# -------------------- Streamlit Config --------------------
+
 st.set_page_config(page_title="Jyotish Engine", layout="centered")
-st.title("🪐 Jyotish Engine")
+st.title("🚰 Jyotish Engine")
 
-# -------------------- Input Form --------------------
 with st.form("input_form"):
     col1, col2 = st.columns(2)
     with col1:
@@ -41,7 +40,6 @@ with st.form("input_form"):
 
     submitted = st.form_submit_button("Generate All Charts")
 
-# -------------------- Utility Function --------------------
 def jd_to_date(jd):
     y, m, d, frac = swe.revjul(jd, swe.GREG_CAL)
     total_seconds = frac * 86400
@@ -50,46 +48,27 @@ def jd_to_date(jd):
     ss = int(total_seconds % 60)
     return datetime.datetime(y, m, d, min(hh, 23), min(mm, 59), min(ss, 59))
 
-# --- Panchang Section ---
 if submitted:
     jd = get_julian_day(date.year, date.month, date.day, hour, minute, second, tz)
     panchang = get_panchang_minimal(jd, lat, lon, tz)
 
     st.markdown("## 🗓️ పంచాంగం (Panchang)")
     panchang_df = pd.DataFrame([
-    {"Property": "Nakshatram", "Value": str(panchang["Nakshatram"])},
-    {"Property": "Padam", "Value": str(panchang["Padam"])},
-    {"Property": "Rasi", "Value": str(panchang["Rasi"])},
-    {"Property": "Vaaram", "Value": str(panchang["Vaaram"])},
+        {"Property": "Nakshatram", "Value": str(panchang["Nakshatram"])},
+        {"Property": "Padam", "Value": str(panchang["Padam"])},
+        {"Property": "Rasi", "Value": str(panchang["Rasi"])},
+        {"Property": "Vaaram", "Value": str(panchang["Vaaram"])}
     ])
     st.table(panchang_df)
 
-
-
-
-# -------------------- Main Processing --------------------
-if submitted:
-    # Create charts folder if not exists
     charts_folder = "charts"
     os.makedirs(charts_folder, exist_ok=True)
 
-    # List of Vargas to generate
     varga_list = [
-        (1, "D1 (Rāśi)"),
-        (2, "D2 (Hora)"),
-        (3, "D3 (Drekkana)"),
-        (4, "D4 (Chaturthamsha)"),
-        (7, "D7 (Saptamsha)"),
-        (9, "D9 (Navamsa)"),
-        (10, "D10 (Dashamsha)"),
-        (12, "D12 (Dwadashamsha)"),
-        (16, "D16 (Shodashamsha)"),
-        (20, "D20 (Vimshamsha)"),
-        (27, "D27 (Bhamsha)"),
-        (30, "D30 (Trimsamsha)"),
-        (40, "D40 (Khavedamsha)"),
-        (45, "D45 (Akshavedamsha)"),
-        (60, "D60 (Shastiamsa)"),
+        (1, "D1 (Rāśi)"), (2, "D2 (Hora)"), (3, "D3 (Drekkana)"), (4, "D4 (Chaturthamsha)"),
+        (7, "D7 (Saptamsha)"), (9, "D9 (Navamsa)"), (10, "D10 (Dashamsha)"), (12, "D12 (Dwadashamsha)"),
+        (16, "D16 (Shodashamsha)"), (20, "D20 (Vimshamsha)"), (27, "D27 (Bhamsha)"), (30, "D30 (Trimsamsha)"),
+        (40, "D40 (Khavedamsha)"), (45, "D45 (Akshavedamsha)"), (60, "D60 (Shastiamsa)")
     ]
 
     sign_labels = get_sign_labels(language="English")
@@ -97,12 +76,8 @@ if submitted:
 
     for varga_num, varga_label in varga_list:
         st.markdown(f"## {varga_label} Chart")
+        planets_in_sign = compute_planets_in_varga(date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num)
 
-        planets_in_sign = compute_planets_in_varga(
-            date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num
-        )
-
-        # Ascendant sign lookup
         asc_sign_num = next((sign for sign, pl in planets_in_sign.items() if "Ascendant" in pl), None)
         if not asc_sign_num:
             st.error("Ascendant not found in chart data.")
@@ -110,7 +85,6 @@ if submitted:
 
         asc_sign = sign_labels.get(((asc_sign_num - 1) % 12) + 1, sign_labels[1])
 
-        # Chart creation
         import jyotichart
         importlib.reload(jyotichart)
         import jyotichart as chart
@@ -127,19 +101,16 @@ if submitted:
         asc_sign_num_for_calc = rev_sign_labels[asc_sign]
         for sign_num in range(1, 13):
             for planet in planets_in_sign.get(sign_num, []):
-                if planet == "Ascendant":
-                    continue
+                if planet == "Ascendant": continue
                 if planet in planet_symbols:
                     house_num = (sign_num - asc_sign_num_for_calc) % 12 + 1
                     mychart.add_planet(planet, planet_symbols[planet], house_num)
 
         mychart.updatechartcfg(aspect=False)
 
-        # Save chart permanently to charts folder
         chart_filename = f"{charts_folder}/{varga_label.replace(' ', '_').replace('(', '').replace(')', '')}_{name.replace(' ', '_')}.svg"
         mychart.draw(os.path.dirname(chart_filename), os.path.splitext(os.path.basename(chart_filename))[0], "svg")
 
-        # Display SVG
         if os.path.exists(chart_filename):
             with open(chart_filename, "rb") as f:
                 svg_bytes = f.read()
@@ -148,13 +119,8 @@ if submitted:
         else:
             st.error(f"Could not find SVG file: {chart_filename}")
 
-    # -------------------- Planet Table --------------------
     st.markdown("## గ్రహ స్థితి పట్టిక")
-    planetary_info = compute_planetary_info_telugu(
-        date.year, date.month, date.day,
-        hour, minute, second,
-        lat, lon, tz
-    )
+    planetary_info = compute_planetary_info_telugu(date.year, date.month, date.day, hour, minute, second, lat, lon, tz)
     st.table([
         {
             "గ్రహం": TELUGU_PLANETS.get(p["planet"], p["planet"]),
@@ -167,14 +133,11 @@ if submitted:
         } for p in planetary_info
     ])
 
-    # -------------------- Vimshottari Dasha --------------------
-    st.markdown("## వింశోత్తరి దశా పట్టిక (Vimshottari Dasha Table)")
-
-    jd_birth = get_julian_day(date.year, date.month, date.day, hour, minute, second, tz)
+    st.markdown("## వింశోత్తరి దశా పట్టిక")
+    jd_birth = jd
     swe.set_sid_mode(swe.SIDM_LAHIRI)
     flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
     moon_long = swe.calc_ut(jd_birth, swe.MOON, flag)[0][0] % 360
-
     dashas = compute_vimsottari_dashas(moon_long, jd_birth)
 
     for maha in dashas:
@@ -183,21 +146,54 @@ if submitted:
         for antar in maha["antardashas"]:
             antar_table.append({
                 "అంతర్దశ": antar["antardasha_lord"],
-                "ప్రారంభం": jd_to_date(antar["start_jd"]).strftime("%Y-%m-%d"),
+                "ప్రారమ్భం": jd_to_date(antar["start_jd"]).strftime("%Y-%m-%d"),
                 "ముగింపు": jd_to_date(antar["end_jd"]).strftime("%Y-%m-%d")
             })
         st.table(pd.DataFrame(antar_table).astype(str))
 
-    # -------------------- Shadbala --------------------
-    def get_chart_data_stub(planet_name):
-        # Stubbed version; you'll replace with real chart logic.
-        # You already calculate many of these values inside your system.
-        raise NotImplementedError("You need to hook this to your actual planetary data logic.")
-
     st.markdown("## 🔯 శడ్బల పట్టిక (Shadbala Table)")
 
+
+    def get_chart_data(planet_name):
+        # Handle meta case
+        if planet_name == "meta":
+            return {
+                "jd": jd_birth,
+                "sunrise": panchang.get("sunrise", 0),
+                "sunset": panchang.get("sunset", 0),
+                "day_birth": True,
+                "lmt": (jd_birth - int(jd_birth)) * 24,
+                "location": (lat, lon)
+            }
+
+        # Map integer index to planet name
+        planet_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
+        planet_str = planet_names[planet_name] if isinstance(planet_name, int) else planet_name
+
+        for p in planetary_info:
+            if p["planet"] == planet_str:
+                return {
+                    "vedic_longitude": float(p["degrees"]),
+                    "tropical_longitude": float(p["degrees"]),  # adjust if different
+                    "latitude": 0.0,  # placeholder
+                    "speed": 1.0,     # placeholder
+                    "varga": {
+                        0: 15, 1: 15, 2: 15, 3: 15, 4: 15, 5: 15, 6: 15  # mock values
+                    }
+                }
+
+        # Default fallback
+        return {
+            "vedic_longitude": 0.0,
+            "tropical_longitude": 0.0,
+            "latitude": 0.0,
+            "speed": 0.0,
+            "varga": {}
+        }
+
+
     try:
-        shadbala_data = compute_shadbala(jd_birth, lat, lon, tz, get_chart_data_stub)
+        shadbala_data = compute_shadbala(jd_birth, lat, lon, tz, get_chart_data, date, hour, minute, second)
         shadbala_df = pd.DataFrame([
             {
                 "Planet": planet,
@@ -215,28 +211,14 @@ if submitted:
         ])
         st.dataframe(shadbala_df)
 
-        # -------------------- Shadbala Bar Chart --------------------
         st.markdown("### 📊 Shadbala Total vs Required (Virupa Strength)")
         plt.figure(figsize=(10, 5))
-        sns.barplot(
-            data=shadbala_df,
-            x="Planet",
-            y="Total",
-            color='green',
-            label="Total Bala"
-        )
-        sns.barplot(
-            data=shadbala_df,
-            x="Planet",
-            y="Required",
-            color='red',
-            alpha=0.5,
-            label="Required Bala"
-        )
+        sns.barplot(data=shadbala_df, x="Planet", y="Total", color='green', label="Total Bala")
+        sns.barplot(data=shadbala_df, x="Planet", y="Required", color='red', alpha=0.5, label="Required Bala")
         plt.ylabel("Virupas")
         plt.title("Shadbala Total vs Required")
         plt.legend()
         st.pyplot(plt.gcf())
-    except NotImplementedError as e:
-        st.warning("Shadbala not computed: " + str(e))
 
+    except Exception as e:
+        st.warning("Shadbala not computed: " + str(e))

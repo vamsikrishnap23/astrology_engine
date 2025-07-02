@@ -1,5 +1,28 @@
 import swisseph as swe
 
+
+# Internal indices for classical planets (used in Shadbala calculation)
+OSUN = 0
+OMOON = 1
+OMARS = 2
+OMERCURY = 3
+OJUPITER = 4
+OVENUS = 5
+OSATURN = 6
+
+PLANET_INDEX_TO_NAME = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
+PLANETS_INDEXED = [OSUN, OMOON, OMARS, OMERCURY, OJUPITER, OVENUS, OSATURN]
+
+# Varga chart types
+V_RASI = 0
+V_NAVAMSA = 1
+V_HORA = 2
+V_DREKKANA = 3
+V_SAPTAMAMSA = 4
+V_DVADASAMSA = 5
+V_TRIMSAMSA = 6
+
+
 PLANETS = {
     'Sun': swe.SUN, 'Moon': swe.MOON, 'Mars': swe.MARS, 'Mercury': swe.MERCURY,
     'Jupiter': swe.JUPITER, 'Venus': swe.VENUS, 'Saturn': swe.SATURN,
@@ -76,3 +99,4 @@ RASI_LORDS = {
     1: "Mars", 2: "Venus", 3: "Mercury", 4: "Moon", 5: "Sun", 6: "Mercury",
     7: "Venus", 8: "Mars", 9: "Jupiter", 10: "Saturn", 11: "Saturn", 12: "Jupiter"
 }
+
