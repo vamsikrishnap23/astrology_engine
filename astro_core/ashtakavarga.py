@@ -1,9 +1,3 @@
-# ashtakavarga.py
-"""
-100% accurate Ashtakavarga implementation (Maitreya logic, Sun–Saturn only).
-Uses the exact static BAV tables from the Maitreya C++ source.
-"""
-
 PLANET_NAMES = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
 SIGN_NAMES = [
     "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
@@ -89,7 +83,6 @@ def compute_bhinna_ashtakavarga(planet_longitudes):
     planet_longitudes: dict {planet_index: longitude in degrees}
     Returns: dict {planet_index: [bindu for each sign 0..11]}
     """
-    # First, get the sign (0=Aries,...,11=Pisces) of each planet
     planet_signs = {i: get_rasi(planet_longitudes[i]) for i in PLANET_INDEXES}
     bav = {}
     for p in PLANET_INDEXES:
@@ -98,7 +91,7 @@ def compute_bhinna_ashtakavarga(planet_longitudes):
         for sign in range(12):  # 0=Aries ... 11=Pisces
             bindu = 0
             for q in PLANET_INDEXES:
-                # If planet q is in this sign, add the table value for q and this sign
+                # Only add if planet q is in this sign
                 if planet_signs[q] == sign:
                     bindu += table[q][sign]
             bav[p].append(bindu)
@@ -129,9 +122,3 @@ def print_ashtakavarga_chart(chart):
     print("Sign     :", " ".join([f"{s+1:2d}" for s in range(12)]))
     print("Bindus   :", " ".join([f"{b:2d}" for b in chart['sarva']]))
 
-# === Example usage ===
-if __name__ == "__main__":
-    # Example: planets at 0, 30, ..., 180 degrees (Aries to Libra)
-    planet_longitudes = {i: i*30 for i in PLANET_INDEXES}
-    chart = ashtakavarga_chart(planet_longitudes)
-    print_ashtakavarga_chart(chart)
