@@ -1,0 +1,45 @@
+<svg width="490" height="330" viewBox="0 0 490 340" xmlns="http://www.w3.org/2000/svg">
+
+        <style>
+            .sign-num { font: bold 14px sans-serif; fill: gray; }
+            .sarva-val { font: bold 18px sans-serif; fill: black; }
+        </style>
+
+    
+<rect x="123" y="10" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="128" y="25" class="sign-num">Ar</text>
+<rect x="243" y="10" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="248" y="25" class="sign-num">Ta</text>
+<rect x="363" y="10" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="368" y="25" class="sign-num">Ge</text>
+<rect x="363" y="90" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="368" y="105" class="sign-num">Cn</text>
+<rect x="363" y="170" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="368" y="185" class="sign-num">Le</text>
+<rect x="363" y="250" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="368" y="265" class="sign-num">Vi</text>
+<rect x="243" y="250" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="248" y="265" class="sign-num">Li</text>
+<rect x="123" y="250" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="128" y="265" class="sign-num">Sc</text>
+<rect x="3" y="250" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="8" y="265" class="sign-num">Sg</text>
+<rect x="3" y="170" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="8" y="185" class="sign-num">Cp</text>
+<rect x="3" y="90" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="8" y="105" class="sign-num">Aq</text>
+<rect x="3" y="10" width="120" height="80" fill="white" stroke="black" stroke-width="2"/>
+<text x="8" y="25" class="sign-num">Pi</text>
+<text x="180" y="45" class="sarva-val" text-anchor="middle">32</text>
+<text x="300" y="45" class="sarva-val" text-anchor="middle">31</text>
+<text x="420" y="45" class="sarva-val" text-anchor="middle">26</text>
+<text x="420" y="125" class="sarva-val" text-anchor="middle">31</text>
+<text x="420" y="205" class="sarva-val" text-anchor="middle">28</text>
+<text x="420" y="285" class="sarva-val" text-anchor="middle">34</text>
+<text x="300" y="285" class="sarva-val" text-anchor="middle">29</text>
+<text x="180" y="285" class="sarva-val" text-anchor="middle">23</text>
+<text x="60" y="285" class="sarva-val" text-anchor="middle">17</text>
+<text x="60" y="205" class="sarva-val" text-anchor="middle">34</text>
+<text x="60" y="125" class="sarva-val" text-anchor="middle">31</text>
+<text x="60" y="45" class="sarva-val" text-anchor="middle">24</text>
+</svg>
