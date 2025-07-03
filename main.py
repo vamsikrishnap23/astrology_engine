@@ -118,28 +118,32 @@ tabs = st.tabs(["View 1","Div Charts", "Ashtakavarga", "All"])
 
 #----------------------------- HELPER FUNCTIONS --------------------------------------
 
-def wait_for_files(file_list, timeout=5, poll_interval=0.5):
-    start_time = time.time()
-    while True:
-        if all(os.path.exists(f) for f in file_list):
-            return True
-        if time.time() - start_time > timeout:
-            return False
-        time.sleep(poll_interval)
 
 def draw_and_fix_svg_chart(chart_obj, charts_folder, filename_base):
+    charts_folder = charts_folder.replace("\\", "/")
+    os.makedirs(charts_folder, exist_ok=True)
+
     chart_obj.draw(charts_folder, filename_base, "svg")
+
     svg_path = os.path.join(charts_folder, f"{filename_base}.svg")
     if os.path.exists(svg_path):
-        with open(svg_path, "r", encoding="utf-16") as f:
-            svg_text = f.read()
+        try:
+            with open(svg_path, "r", encoding="utf-16") as f:
+                svg_text = f.read()
+        except UnicodeError:
+            with open(svg_path, "r", encoding="utf-8-sig") as f:
+                svg_text = f.read()
+
         svg_text = svg_text.replace("stroke:red", "stroke:white")
-        with open(svg_path, "w", encoding="utf-16") as f:
+
+        with open(svg_path, "w", encoding="utf-8-sig") as f:
             f.write(svg_text)
+
         return svg_path
     else:
         st.error(f"Could not find SVG file: {svg_path}")
         return None
+
 
 def display_svg_chart(file_path: str, title: str = ""):
     if os.path.exists(file_path):
@@ -257,6 +261,7 @@ if submitted:
         panchang_df.to_csv(f"{charts_folder}/panchang_details_{name_safe}.csv", index=False)
 
         # ---------------------------------- DIV CHARTS -------------------------------------
+        charts_folder = charts_folder.replace("\\", "/")
 
         varga_list = [
             (1, "D1 (Rāśi)"), (2, "D2 (Hora)"), (3, "D3 (Drekkana)"), (4, "D4 (Chaturthamsha)"),
