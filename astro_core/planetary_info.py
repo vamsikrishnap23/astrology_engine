@@ -106,7 +106,7 @@ def compute_planetary_info_telugu(year, month, day, hour, minute, second, lat, l
             "rasi_adhipathi": TELUGU_RASI_LORDS[rasi],
             "nakshatram": TELUGU_NAKSHATRAS[nakshatra - 1],
             "padam": pada,
-            "retrogration": "వాక్రం" if retro else "కాదు",
+            "retrogration": "వక్రం" if retro else "కాదు",
             "speed": f"{speed:.5f}"
         })
 
@@ -126,7 +126,7 @@ def compute_planetary_info_telugu(year, month, day, hour, minute, second, lat, l
         "rasi_adhipathi": TELUGU_RASI_LORDS[rahu_rasi],
         "nakshatram": TELUGU_NAKSHATRAS[rahu_nakshatra - 1],
         "padam": rahu_pada,
-        "retrogration": "వాక్రం",  # Rahu is always retrograde
+        "retrogration": "వక్రం",  # Rahu is always retrograde
         "speed": f"{rahu_speed:.5f}"
     })
 
@@ -145,7 +145,7 @@ def compute_planetary_info_telugu(year, month, day, hour, minute, second, lat, l
         "rasi_adhipathi": TELUGU_RASI_LORDS[ketu_rasi],
         "nakshatram": TELUGU_NAKSHATRAS[ketu_nakshatra - 1],
         "padam": ketu_pada,
-        "retrogration": "వాక్రం",  # Ketu is always retrograde
+        "retrogration": "వక్రం",  # Ketu is always retrograde
         "speed": f"{ketu_speed:.5f}"
     })
 

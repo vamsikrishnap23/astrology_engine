@@ -31,7 +31,7 @@ KARANA_NAMES = [
 ]
 
 VARA_NAMES = [
-    "Ravivara", "Somavara", "Mangalavara", "Budhavara", "Guruvara", "Shukravara", "Shanivara"
+    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 ]
 
 def get_ayanamsa(jd):

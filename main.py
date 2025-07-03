@@ -26,6 +26,7 @@ from astro_core.shadbala import compute_shadbala
 from astro_core.ashtakavarga import Ashtakavarga, OSUN, OMOON, OMERCURY, OVENUS, OMARS, OJUPITER, OSATURN, OASCENDANT, REKHA
 from astro_core.progression import compute_progressed_chart, get_sign_number, get_sign_labels as get_sign_labels_prog
 
+
 #------------------------------ DICTIONARIES -------------------------
 
 
@@ -142,8 +143,8 @@ def ashtakavarga_rekha_table(ashta, planet_labels, sign_labels):
         data.append(row)
     df = pd.DataFrame(data, columns=["Planet"] + [sign_labels[i] for i in range(12)])
     # Add Sarva row (sum of Sun–Saturn only)
-    sarva = ["Sarva"] + [sum(ashta.getItem(REKHA, pidx, rasi) for pidx in range(7)) for rasi in range(12)]
-    df.loc[len(df)] = sarva
+    # sarva = ["Sarva"] + [sum(ashta.getItem(REKHA, pidx, rasi) for pidx in range(7)) for rasi in range(12)]
+    # df.loc[len(df)] = sarva
     return df
 
 
@@ -260,11 +261,11 @@ if submitted:
 
         with tabs[2]:
             # --- Rekha Table ---
-            rekha_csv = f"{charts_folder}/rekha_table_{name_safe}.csv"
+            rekha_csv = f"{charts_folder}/rekha_table_{name_safe}_telugu.csv"
             if os.path.exists(rekha_csv):
                 st.markdown("## Binna Ashtakavarga Rekha Table")
                 df_rekha = pd.read_csv(rekha_csv)
-                st.dataframe(df_rekha, use_container_width=True)
+                st.dataframe(df_rekha, use_container_width=True, hide_index=True)
 
             # --- Sarva Chart ---
             sarva_svg = f"{charts_folder}/Sarva_{name_safe}.svg"
@@ -289,30 +290,58 @@ if submitted:
         # --------------------------------- TAB 3 -----------------------------------------
 
         with tabs[3]:
+            # Panchangam Labels and Translations (Inline Only)
+            TELUGU_NAKSHATRAS = [
+                "అశ్విని", "భరణి", "కృత్తిక", "రోహిణి", "మృగశిర", "ఆర్ద్ర", "పునర్వసు",
+                "పుష్యమి", "ఆశ్లేష", "మఖ", "పుబ్బ", "ఉత్తర", "హస్త", "చిత్త", "స్వాతి", "విశాఖ",
+                "అనూరాధ", "జ్యేష్ఠ", "మూల", "పూర్వాషాఢ", "ఉత్తరాషాఢ", "శ్రవణం", "ధనిష్ట",
+                "శతభిష", "పూర్వాభాద్ర", "ఉత్తరాభాద్ర", "రేవతి"
+            ]
 
-            # --------------------------- PANCHANGAM ----------------------------------
-            os.makedirs(charts_folder, exist_ok=True)
+            TELUGU_RASIS = {
+                "Mesha": "మేషం", "Vrishabha": "వృషభం", "Mithuna": "మిథునం", "Karka": "కర్కాటకం",
+                "Simha": "సింహం", "Kanya": "కన్యా", "Tula": "తుల", "Vrischika": "వృశ్చికం",
+                "Dhanu": "ధనుస్సు", "Makara": "మకరం", "Kumbha": "కుంభం", "Meena": "మీనం"
+            }
+
+            TELUGU_VAARAM = {
+                "Sunday": "ఆదివారం", "Monday": "సోమవారం", "Tuesday": "మంగళవారం",
+                "Wednesday": "బుధవారం", "Thursday": "గురువారం", "Friday": "శుక్రవారం", "Saturday": "శనివారం"
+            }
+
+            # ---------- Panchangam Rendering Block ----------
+            st.markdown("## 🗓️ పంచాంగం")
             jd = get_julian_day(date.year, date.month, date.day, hour, minute, second, tz)
+
+
             panchang = get_panchang_minimal(jd, lat, lon, tz)
 
-            st.markdown("## 🗓️ పంచాంగం (Panchang)")
-            if language == "Telugu":
-                panchang_df = pd.DataFrame([
-                    {"గుణము": "నక్షత్రం", "విలువ": str(panchang["Nakshatram"])},
-                    {"గుణము": "పదం", "విలువ": str(panchang["Padam"])},
-                    {"గుణము": "రాశి", "విలువ": str(panchang["Rasi"])},
-                    {"గుణము": "వారం", "విలువ": str(panchang["Vaaram"])}
-                ])
-            else:
-                panchang_df = pd.DataFrame([
-                    {"Property": "Nakshatram", "Value": str(panchang["Nakshatram"])},
-                    {"Property": "Padam", "Value": str(panchang["Padam"])},
-                    {"Property": "Rasi", "Value": str(panchang["Rasi"])},
-                    {"Property": "Vaaram", "Value": str(panchang["Vaaram"])}
-                ])
+            # Telugu Translations
+            nakshatra_eng = panchang["Nakshatram"]
+            nakshatra_idx = next((i for i, val in enumerate([
+                "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu",
+                "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta",
+                "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha",
+                "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada",
+                "Uttara Bhadrapada", "Revati"
+            ]) if val == nakshatra_eng), -1)
+
+
+            nakshatra_te = TELUGU_NAKSHATRAS[nakshatra_idx] if nakshatra_idx != -1 else nakshatra_eng
+            padam_te = f"{panchang['Padam']}వ పదం"  # e.g., "3వ పదం"
+            rasi_te = TELUGU_RASIS.get(panchang["Rasi"], panchang["Rasi"])
+            vaaram_te = TELUGU_VAARAM.get(panchang["Vaaram"], panchang["Vaaram"])
+
+            # Build DataFrame
+            panchang_df = pd.DataFrame([
+                {"గుణము": "నక్షత్రం", "విలువ": nakshatra_te},
+                {"గుణము": "పదం", "విలువ": padam_te},
+                {"గుణము": "రాశి", "విలువ": rasi_te},
+                {"గుణము": "వారం", "విలువ": vaaram_te}
+            ])
+
             st.table(panchang_df)
             panchang_df.to_csv(f"{charts_folder}/panchang_details_{name_safe}.csv", index=False)
-
 
             # ---------------------------------- DIV CHARTS -------------------------------------
 
@@ -337,7 +366,7 @@ if submitted:
                 # Ascendant logic as before...
                 asc_sign_num = next((sign for sign, pl in planets_in_sign.items() if "Ascendant" in pl), None)
                 if not asc_sign_num:
-                    st.warning(f"⚠️ Ascendant not found for {varga_label}. Skipping chart rendering.")
+                    st.warning(f"Ascendant not found for {varga_label}. Skipping chart rendering.")
                     continue
 
                 # --- Calculate planetary info for THIS divisional chart ---
@@ -345,7 +374,7 @@ if submitted:
                     date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num
                 )
                 retrograde_lookup = {
-                    p["planet"]: (p["retrogration"] in ["వాక్రం", "Yes", "R", "vakram", "Retrograde"])
+                    p["planet"]: (p["retrogration"] in ["వక్రం", "Yes", "R", "vakram", "Retrograde"])
                     for p in planetary_info
                 }
                 all_planetary_info[varga_num] = retrograde_lookup
@@ -364,21 +393,31 @@ if submitted:
                     continue
 
                 planet_symbols = {
-                    "Sun": "Su", "Moon": "Mo", "Mars": "Ma", "Mercury": "Me",
-                    "Jupiter": "Ju", "Venus": "Ve", "Saturn": "Sa",
-                    "Rahu": "Ra", "Ketu": "Ke", "Ascendant": "As"
+                    "Sun": "సూ",       # Sūryuḍu
+                    "Moon": "చం",      # Chandra
+                    "Mars": "కు",     # Kujudu
+                    "Mercury": "బు",    # Budhudu
+                    "Jupiter": "గు",    # Guru
+                    "Venus": "శు",      # Shukrudu
+                    "Saturn": "శ",      # Shani
+                    "Rahu": "రా",       # Rahu
+                    "Ketu": "కే",       # Ketu
+                    "Ascendant": "ల"     # Lagna
                 }
+
                 asc_sign_num_for_calc = rev_sign_labels[asc_sign]
                 for sign_num in range(1, 13):
                     for planet in planets_in_sign.get(sign_num, []):
                         if planet == "Ascendant":
+                            symbol = planet_symbols["Ascendant"]  # "ల"
                             continue
                         if planet in planet_symbols:
                             house_num = (sign_num - asc_sign_num_for_calc) % 12 + 1
+                            symbol = planet_symbols[planet]
                             is_retro = all_planetary_info[varga_num].get(planet, False)
                             mychart.add_planet(
                                 planet,
-                                planet_symbols[planet],
+                                symbol,
                                 house_num,
                                 retrograde=is_retro,
                                 colour="black"
@@ -401,16 +440,15 @@ if submitted:
 
 
                     
-
-
                 # ---- Ashtakavarga: Only for D1 (Rāśi) ----
                 if varga_num == 1:
-                    st.markdown("### Ashtakavarga (Rekha, Sarva) for D1 (Rāśi) Chart")
+                    st.markdown("### అష్టకవర్గ (Rekha, Sarva) - D1 (రాశి) చార్ట్")
+
                     get_rasi = get_rasi_for_ashtakavarga(planets_in_sign)
                     ashta = Ashtakavarga(get_rasi)
                     ashta.update()
 
-                    # Build planets_in_sign dict
+                    # Build planet placement
                     planet_labels = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Ascendant"]
                     ashta_planets_in_sign = {i: [] for i in range(1, 13)}
                     for idx, planet in enumerate(planet_labels):
@@ -421,14 +459,48 @@ if submitted:
                             if planet in ("Rahu", "Ketu"):
                                 ashta_planets_in_sign[sign_num].append(planet)
 
-                    # Rekha Table
-                    planet_labels_table = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"]
-                    sign_labels_row = [sign_labels[i + 1] for i in range(12)]  # 1-based
-                    rekha_df = ashtakavarga_rekha_table(ashta, planet_labels_table, sign_labels_row)
-                    rekha_df.to_csv(f"{charts_folder}/rekha_table_{name}.csv", index=False)
+                    # English Sign Labels (for original Rekha table)
+                    sign_labels_row = [
+                        "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+                        "Libra", "Scorpio", "Saggitarius", "Capricorn", "Aquarius", "Pisces"
+                    ]
 
-                    st.markdown("#### Rekha Table (Binna Ashtakavarga)")
-                    st.dataframe(rekha_df, use_container_width=True)
+                    # Compute Rekha table
+                    planet_labels_table = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"]
+                    rekha_df = ashtakavarga_rekha_table(ashta, planet_labels_table, sign_labels_row)
+
+                    # Telugu Dictionaries
+                    telugu_planets = {
+                        "Sun": "సూర్యుడు", "Moon": "చంద్రుడు", "Mercury": "బుధుడు",
+                        "Venus": "శుక్రుడు", "Mars": "కుజుడు", "Jupiter": "గురు", "Saturn": "శని"
+                    }
+
+                    telugu_signs = {
+                        "Aries": "మేషం", "Taurus": "వృషభం", "Gemini": "మిథునం", "Cancer": "కర్కాటకం",
+                        "Leo": "సింహం", "Virgo": "కన్యా", "Libra": "తులా", "Scorpio": "వృశ్చికం",
+                        "Saggitarius": "ధనుస్సు", "Capricorn": "మకరం", "Aquarius": "కుంభం", "Pisces": "మీనం"
+                    }
+
+                    # Translate Columns: Signs (from second column onwards)
+                    new_columns = ["గ్రహం"] + [telugu_signs.get(col, col) for col in rekha_df.columns[1:]]
+                    rekha_df.columns = new_columns
+
+                    # Translate Planet Names (first column)
+                    rekha_df.iloc[:, 0] = rekha_df.iloc[:, 0].apply(lambda x: telugu_planets.get(x, x))
+
+                    # Add Sarva row
+                    sarva = [sum(ashta.getItem(REKHA, pidx, rasi) for pidx in range(7)) for rasi in range(12)]
+                    sarva_row = ["సర్వ"] + sarva
+                    rekha_df.loc[len(rekha_df.index)] = sarva_row
+
+                    # Save to file
+                    rekha_path = f"{charts_folder}/rekha_table_{name_safe}_telugu.csv"
+                    rekha_df.to_csv(rekha_path, index=False, encoding="utf-8-sig")
+
+                    # Display
+                    st.markdown("#### 🗒️ బిన్న అష్టకవర్గ పట్టిక (Rekha Table)")
+                    st.dataframe(rekha_df, use_container_width=True, hide_index=True)
+
 
                     # Sarva Ashtakavarga values (as list of 12 ints)
                     sarva = [sum(ashta.getItem(REKHA, pidx, rasi) for pidx in range(7)) for rasi in range(12)]
@@ -471,7 +543,7 @@ if submitted:
             ])
 
             # Display in app
-            st.dataframe(planetary_info_df, use_container_width=True)
+            st.dataframe(planetary_info_df, use_container_width=True, hide_index=True)
 
             # Save to file
             planetary_info_df.to_csv(f"{charts_folder}/planetary_info_telugu_{name.replace(' ', '_')}.csv", index=False)
@@ -499,7 +571,7 @@ if submitted:
                 antar_df = pd.DataFrame(antar_table).astype(str)
 
                 # Display using st.dataframe for better formatting
-                st.dataframe(antar_df, use_container_width=True)
+                st.dataframe(antar_df, use_container_width=True, hide_index=True)
 
                 # Save to CSV
                 maha_filename = f"{charts_folder}/dasha_{maha['lord']}_{name.replace(' ', '_')}.csv"
