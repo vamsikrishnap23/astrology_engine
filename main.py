@@ -11,6 +11,7 @@ import time
 import shutil
 import jyotichart
 importlib.reload(jyotichart)
+import re
 
 from datetime import datetime as dt
 
@@ -26,6 +27,35 @@ from astro_core.panchang import get_panchang_minimal
 from astro_core.shadbala import compute_shadbala
 from astro_core.ashtakavarga import Ashtakavarga, OSUN, OMOON, OMERCURY, OVENUS, OMARS, OJUPITER, OSATURN, OASCENDANT, REKHA
 from astro_core.progression import compute_progressed_chart, get_sign_number, get_sign_labels as get_sign_labels_prog
+
+
+#-------------------------------- MONKEY PATCH -------------------------------------
+
+# Monkey patch the jyotichart draw method to fix invalid path usage
+def patch_jyotichart_svg_path():
+    try:
+        init_file = jyotichart.__file__  # Get path to __init__.py
+        with open(init_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Fix all occurrences of Windows-style backslash f-strings
+        new_content = re.sub(
+            r"chartSVGFullname\s*=\s*f?[\"']{1}.*?\\{.*?}[\"']{1}",
+            lambda m: "chartSVGFullname = os.path.join(location, f\"{chartSVGfilename}.svg\")",
+            content
+        )
+
+        if new_content != content:
+            with open(init_file, "w", encoding="utf-8") as f:
+                f.write(new_content)
+            print("✅ Patched jyotichart path issue in __init__.py")
+        else:
+            print("ℹ️ No patch needed; already correct")
+    except Exception as e:
+        print(f"⚠️ Failed to patch jyotichart: {e}")
+
+patch_jyotichart_svg_path()
+importlib.reload(jyotichart)  # Reload so patch applies
 
 
 #------------------------------ CLEARING FOLDER -------------------------
@@ -120,16 +150,10 @@ tabs = st.tabs(["View 1","Div Charts", "Ashtakavarga", "All"])
 
 
 def draw_and_fix_svg_chart(chart_obj, charts_folder, filename_base):
-    import os
-
-    # Set a clean path override to avoid path issues
-    chart_obj.chartSVGFullname = os.path.join(charts_folder, f"{filename_base}.svg")
     chart_obj.draw(charts_folder, filename_base, "svg")
-
-    svg_path = chart_obj.chartSVGFullname
+    svg_path = os.path.join(charts_folder, f"{filename_base}.svg")
 
     if os.path.exists(svg_path):
-        # Read with utf-16 because jyotichart writes in utf-16
         with open(svg_path, "r", encoding="utf-16") as f:
             svg_text = f.read()
 
@@ -142,6 +166,7 @@ def draw_and_fix_svg_chart(chart_obj, charts_folder, filename_base):
     else:
         st.error(f"Could not find SVG file: {svg_path}")
         return None
+
 
 
 def display_svg_chart(file_path: str, title: str = ""):
