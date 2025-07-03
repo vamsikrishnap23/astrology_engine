@@ -334,23 +334,29 @@ if submitted:
             sign_labels = get_sign_labels(language="English")
             rev_sign_labels = {v: k for k, v in sign_labels.items()}
 
+            all_planetary_info = {}
+
             for varga_num, varga_label in varga_list:
                 st.markdown(f"## {varga_label} Chart")
-                planets_in_sign = compute_planets_in_varga(date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num)
+                planets_in_sign = compute_planets_in_varga(
+                    date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num
+                )
 
-                asc_sign_num = None
-                retries = 0
-                while retries < MAX_RETRIES:
-                    planets_in_sign = compute_planets_in_varga(date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num)
-                    asc_sign_num = next((sign for sign, pl in planets_in_sign.items() if "Ascendant" in pl), None)
-                    if asc_sign_num:
-                        break
-                    retries += 1
-                    time.sleep(WAIT_SECONDS)
-
+                # Ascendant logic as before...
+                asc_sign_num = next((sign for sign, pl in planets_in_sign.items() if "Ascendant" in pl), None)
                 if not asc_sign_num:
                     st.warning(f"⚠️ Ascendant not found for {varga_label}. Skipping chart rendering.")
                     continue
+
+                # --- Calculate planetary info for THIS divisional chart ---
+                planetary_info = compute_planetary_info_telugu(
+                    date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num
+                )
+                retrograde_lookup = {
+                    p["planet"]: (p["retrogration"] in ["వాక్రం", "Yes", "R", "vakram", "Retrograde"])
+                    for p in planetary_info
+                }
+                all_planetary_info[varga_num] = retrograde_lookup
 
                 import jyotichart
                 importlib.reload(jyotichart)
@@ -358,51 +364,51 @@ if submitted:
 
                 mychart = chart.SouthChart(varga_label + " Chart", name, IsFullChart=True)
 
-
                 asc_index = ((asc_sign_num - 1) % 12) + 1
                 asc_sign = sign_labels.get(asc_index)
-
-                if not asc_sign:
-                    st.warning(f"⚠️ Ascendant sign label not found for index {asc_index}. Skipping chart rendering.")
-                    continue
-
                 result = mychart.set_ascendantsign(asc_sign)
                 if result != "Success":
                     st.error(f"Failed to set ascendant sign '{asc_sign}' for {varga_label}: {result}")
                     continue
-
 
                 planet_symbols = {
                     "Sun": "Su", "Moon": "Mo", "Mars": "Ma", "Mercury": "Me",
                     "Jupiter": "Ju", "Venus": "Ve", "Saturn": "Sa",
                     "Rahu": "Ra", "Ketu": "Ke", "Ascendant": "As"
                 }
-
                 asc_sign_num_for_calc = rev_sign_labels[asc_sign]
                 for sign_num in range(1, 13):
                     for planet in planets_in_sign.get(sign_num, []):
-                        if planet == "Ascendant": continue
+                        if planet == "Ascendant":
+                            continue
                         if planet in planet_symbols:
                             house_num = (sign_num - asc_sign_num_for_calc) % 12 + 1
-                            mychart.add_planet(planet, planet_symbols[planet], house_num, colour="black")
+                            is_retro = all_planetary_info[varga_num].get(planet, False)
+                            mychart.add_planet(
+                                planet,
+                                planet_symbols[planet],
+                                house_num,
+                                retrograde=is_retro,
+                                colour="black"
+                            )
 
                 house_colors = ["white"] * 12
-
                 mychart.updatechartcfg(
-                    aspect=False,              
-                    clr_background="white",    
-                    clr_outbox="black",       
-                    clr_line="black",         
-                    clr_Asc="darkblue",        
-                    clr_houses=house_colors    
+                    aspect=False,
+                    clr_background="white",
+                    clr_outbox="black",
+                    clr_line="black",
+                    clr_Asc="darkblue",
+                    clr_houses=house_colors
                 )
-                
 
                 filename_base = f"{varga_label.replace(' ', '_').replace('(', '').replace(')', '')}_{name.replace(' ', '_')}"
                 chart_path = draw_and_fix_svg_chart(mychart, charts_folder, filename_base)
-
                 if chart_path:
                     display_svg_chart(chart_path)
+
+
+                    
 
 
                 # ---- Ashtakavarga: Only for D1 (Rāśi) ----
@@ -447,6 +453,9 @@ if submitted:
 
             st.markdown("## గ్రహ స్థితి పట్టిక")
             planetary_info = compute_planetary_info_telugu(date.year, date.month, date.day, hour, minute, second, lat, lon, tz)
+
+
+
 
 
             # Convert to DataFrame before displaying
