@@ -82,8 +82,8 @@ with st.form("input_form"):
     
     # --- LEFT COLUMN ---
     with col1:
-        name = st.text_input("Name", "Vamsi")
-        date = st.date_input("Date of Birth", datetime.date(2005, 11, 23), min_value=datetime.date(1900, 1, 1), max_value=datetime.date(2200, 1, 1))
+        name = st.text_input("Name")
+        date = st.date_input("Date of Birth", datetime.datetime.now(), min_value=datetime.date(1900, 1, 1), max_value=datetime.date(2200, 1, 1))
         hour = st.number_input("Hour (24h)", 0, 23, 15)
         minute = st.number_input("Minute", 0, 59, 35)
         second = st.number_input("Second", 0, 59, 0)
