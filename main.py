@@ -200,31 +200,41 @@ if submitted:
 
         # -------------------- Dasha Tables in 3x3 Grid -------------------------
         st.markdown("## వింశోత్తరి దశ")
+
+        from datetime import datetime as dt
+
         def extract_start_date(csv_path):
             try:
-                df = pd.read_csv(csv_path)
-                if not df.empty:
+                df = pd.read_csv(csv_path, encoding="utf-8-sig")
+                if not df.empty and "ప్రారంభం" in df.columns:
                     return dt.strptime(df.iloc[0]["ప్రారంభం"], "%d-%m-%Y")
             except Exception as e:
                 print(f"Error parsing {csv_path}: {e}")
-            return dt.max  
+            return dt.max  # Use max date to send faulty files to end of sort
 
+        # Get all matching Dasha CSVs for this user/chart
         dasha_files = [
             f for f in os.listdir(charts_folder)
-            if f.startswith("dasha_") and f.endswith(f"{name_safe}.csv")
+            if f.startswith("dasha_") and f.endswith(f"{name_safe}_telugu.csv")
         ]
 
+        # Sort files by starting date of the Antardasha table
         dasha_files.sort(key=lambda x: extract_start_date(os.path.join(charts_folder, x)))
 
-
+        # Display in a 3-column grid
         rows = [dasha_files[i:i+3] for i in range(0, len(dasha_files), 3)]
         for row in rows:
             cols = st.columns(3)
             for col, file in zip(cols, row):
-                df = pd.read_csv(os.path.join(charts_folder, file))
+                file_path = os.path.join(charts_folder, file)
+                df = pd.read_csv(file_path, encoding="utf-8-sig")
+                
+                # Extract Telugu Mahadasha name (e.g., from 'dasha_గురు_Ram.csv')
                 maha_name = file.split("_")[1]
-                col.markdown(f"**{maha_name} మహాదశ**")
+                
+                col.markdown(f"**{maha_name}**")
                 col.dataframe(df, use_container_width=True, hide_index=True)
+
 
 
         #------------------- TABS 1 -------------------------------------
@@ -551,28 +561,37 @@ if submitted:
 
             st.markdown("## వింశోత్తరి దశా పట్టిక")
 
+            # Get Moon longitude for dasha calculation
             jd_birth = jd
             swe.set_sid_mode(swe.SIDM_LAHIRI)
             flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
             moon_long = swe.calc_ut(jd_birth, swe.MOON, flag)[0][0] % 360
             dashas = compute_vimsottari_dashas(moon_long, jd_birth)
 
+            # Inline Telugu planet names
+            telugu_planets = {
+                "Ketu": "కేతు", "Venus": "శుక్రుడు", "Sun": "సూర్యుడు", "Moon": "చంద్రుడు",
+                "Mars": "కుజుడు", "Rahu": "రాహు", "Jupiter": "గురు", "Saturn": "శని", "Mercury": "బుధుడు"
+            }
+
             for maha in dashas:
-                st.markdown(f"### మహాదశ: {maha['lord']}")
+                telugu_maha = telugu_planets.get(maha['lord'], maha['lord'])
+                st.markdown(f"### మహాదశ: {telugu_maha}")
+
                 antar_table = []
                 for antar in maha["antardashas"]:
+                    telugu_antar = telugu_planets.get(antar["antardasha_lord"], antar["antardasha_lord"])
                     antar_table.append({
-                        "అంతర్దశ": antar["antardasha_lord"],
-                        "ప్రారమ్భం": jd_to_date(antar["start_jd"]).strftime("%d-%m-%Y"),
+                        "అంతర్దశ": telugu_antar,
+                        "ప్రారంభం": jd_to_date(antar["start_jd"]).strftime("%d-%m-%Y"),
                         "ముగింపు": jd_to_date(antar["end_jd"]).strftime("%d-%m-%Y")
                     })
-                
-                # Convert to DataFrame
+
                 antar_df = pd.DataFrame(antar_table).astype(str)
 
-                # Display using st.dataframe for better formatting
+                # Display table
                 st.dataframe(antar_df, use_container_width=True, hide_index=True)
 
-                # Save to CSV
-                maha_filename = f"{charts_folder}/dasha_{maha['lord']}_{name.replace(' ', '_')}.csv"
-                antar_df.to_csv(maha_filename, index=False)
+                # Save with Telugu filename
+                maha_filename = f"{charts_folder}/dasha_{telugu_maha}_{name.replace(' ', '_')}_telugu.csv"
+                antar_df.to_csv(maha_filename, index=False, encoding="utf-8-sig")
