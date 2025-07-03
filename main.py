@@ -12,6 +12,10 @@ import jyotichart
 importlib.reload(jyotichart)
 
 from datetime import datetime as dt
+import time
+
+MAX_RETRIES = 10
+WAIT_SECONDS = 0.5
 
 
 
@@ -156,8 +160,6 @@ def sarva_ashtakavarga_svg_chart(sarva, sign_labels, asc_sign_num, name, folder,
 
 if submitted:
     with tabs[0]:
-        import time
-        time.sleep(3)
         charts_folder = "charts"
         name_safe = name.replace(" ", "_")
 
@@ -326,19 +328,45 @@ if submitted:
             st.markdown(f"## {varga_label} Chart")
             planets_in_sign = compute_planets_in_varga(date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num)
 
-            asc_sign_num = next((sign for sign, pl in planets_in_sign.items() if "Ascendant" in pl), None)
+            asc_sign_num = None
+            retries = 0
+            while retries < MAX_RETRIES:
+                planets_in_sign = compute_planets_in_varga(date.year, date.month, date.day, hour, minute, second, lat, lon, tz, varga_num)
+                asc_sign_num = next((sign for sign, pl in planets_in_sign.items() if "Ascendant" in pl), None)
+                if asc_sign_num:
+                    break
+                retries += 1
+                time.sleep(WAIT_SECONDS)
+
             if not asc_sign_num:
-                st.error("Ascendant not found in chart data.")
+                st.warning(f"⚠️ Ascendant not found for {varga_label}. Skipping chart rendering.")
                 continue
 
-            asc_sign = sign_labels.get(((asc_sign_num - 1) % 12) + 1, sign_labels[1])
+            print(f"asc: {asc_sign_num} for {varga_label}")
 
             import jyotichart
             importlib.reload(jyotichart)
             import jyotichart as chart
 
             mychart = chart.SouthChart(varga_label + " Chart", name, IsFullChart=True)
-            mychart.set_ascendantsign(asc_sign)
+
+
+            asc_index = ((asc_sign_num - 1) % 12) + 1
+            asc_sign = sign_labels.get(asc_index)
+
+            if not asc_sign:
+                st.warning(f"⚠️ Ascendant sign label not found for index {asc_index}. Skipping chart rendering.")
+                continue
+
+            print(f"[DEBUG] asc_sign_num: {asc_sign_num}, asc_index: {asc_index}, asc_sign: {asc_sign}")
+            result = mychart.set_ascendantsign(asc_sign)
+            if result != "Success":
+                st.error(f"Failed to set ascendant sign '{asc_sign}' for {varga_label}: {result}")
+                continue
+
+
+
+        
 
             planet_symbols = {
                 "Sun": "Su", "Moon": "Mo", "Mars": "Ma", "Mercury": "Me",
@@ -364,6 +392,7 @@ if submitted:
                 clr_Asc="darkblue",        
                 clr_houses=house_colors    
             )
+            
 
             filename_base = f"{varga_label.replace(' ', '_').replace('(', '').replace(')', '')}_{name.replace(' ', '_')}"
             chart_path = draw_and_fix_svg_chart(mychart, charts_folder, filename_base)
@@ -392,6 +421,11 @@ if submitted:
                     for planet in planets:
                         if planet == "Rahu" or planet == "Ketu":
                             ashta_planets_in_sign[sign_num].append(planet)
+
+
+
+
+
         
                 # --- Rekha Table and Sarva Ashtakavarga Chart ---
                 planet_labels_table = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"]
@@ -405,33 +439,8 @@ if submitted:
                 # ➕ Sarva Ashtakavarga South Indian Chart (with Rekha values)
                 sarva = [sum(ashta.getItem(REKHA, pidx, rasi) for pidx in range(7)) for rasi in range(12)]
 
-                # ✅ Convert Sarva values list to dict with lowercase sign keys
-                # sign_order = [
-                #     "aries", "taurus", "gemini", "cancer", "leo", "virgo",
-                #     "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"
-                # ]
-                # sign_values = dict(zip(sign_order, sarva))
-                # ascendantsign = sign_labels[asc_sign_num].lower()
 
-                # # ✅ Draw SVG chart
-                # sarva_chart_filename = f"SarvaAshtakavarga_{name.replace(' ', '_')}"
-                # draw_rekha_sarva_only_chart(
-                #     sign_values=sign_values,
-                #     ascendantsign=ascendantsign,
-                #     charts_folder=charts_folder,
-                #     filename=sarva_chart_filename
-                # )
 
-                # # ✅ Embed SVG into Streamlit
-                # full_chart_path = os.path.join(charts_folder, f"{sarva_chart_filename}.svg")
-                # if os.path.exists(full_chart_path):
-                #     with open(full_chart_path, "rb") as f:
-                #         svg_bytes = f.read()
-                #     b64 = base64.b64encode(svg_bytes).decode()
-                #     st.markdown("#### Sarva Ashtakavarga Chart (South Indian Style)")
-                #     html(f'<embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="500" height="500">', height=550)
-                # else:
-                #     st.error(f"Could not find SVG file: {full_chart_path}")
 
         # --- Progression Chart Section ---
         st.markdown("## Progression Chart (Secondary Progression)")

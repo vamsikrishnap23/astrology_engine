@@ -29,11 +29,14 @@ PLANETS = {
     'Uranus': swe.URANUS, 'Neptune': swe.NEPTUNE, 'Pluto': swe.PLUTO
 }
 
+
 SIGN_NAMES = {
     1: "Aries", 2: "Taurus", 3: "Gemini", 4: "Cancer",
     5: "Leo", 6: "Virgo", 7: "Libra", 8: "Scorpio",
-    9: "Sagittarius", 10: "Capricorn", 11: "Aquarius", 12: "Pisces"
+    9: "Saggitarius", 10: "Capricorn", 11: "Aquarius", 12: "Pisces"
 }
+
+
 
 TELUGU_SIGNS = {
     1: "మేషం", 2: "వృషభం", 3: "మిథునం", 4: "కర్కాటకం",
