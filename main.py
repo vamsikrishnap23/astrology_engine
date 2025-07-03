@@ -120,18 +120,29 @@ tabs = st.tabs(["View 1","Div Charts", "Ashtakavarga", "All"])
 
 
 def draw_and_fix_svg_chart(chart_obj, charts_folder, filename_base):
+    import os
+
+    # Set a clean path override to avoid path issues
+    chart_obj.chartSVGFullname = os.path.join(charts_folder, f"{filename_base}.svg")
     chart_obj.draw(charts_folder, filename_base, "svg")
-    svg_path = os.path.join(charts_folder, f"{filename_base}.svg")
+
+    svg_path = chart_obj.chartSVGFullname
+
     if os.path.exists(svg_path):
+        # Read with utf-16 because jyotichart writes in utf-16
         with open(svg_path, "r", encoding="utf-16") as f:
             svg_text = f.read()
+
         svg_text = svg_text.replace("stroke:red", "stroke:white")
+
         with open(svg_path, "w", encoding="utf-16") as f:
             f.write(svg_text)
+
         return svg_path
     else:
         st.error(f"Could not find SVG file: {svg_path}")
         return None
+
 
 def display_svg_chart(file_path: str, title: str = ""):
     if os.path.exists(file_path):
