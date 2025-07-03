@@ -31,31 +31,55 @@ from astro_core.progression import compute_progressed_chart, get_sign_number, ge
 
 #-------------------------------- MONKEY PATCH -------------------------------------
 
-# Monkey patch the jyotichart draw method to fix invalid path usage
-def patch_jyotichart_svg_path():
-    try:
-        init_file = jyotichart.__file__  # Get path to __init__.py
-        with open(init_file, "r", encoding="utf-8") as f:
-            content = f.read()
+import os
+import re
 
-        # Fix all occurrences of Windows-style backslash f-strings
-        new_content = re.sub(
-            r"chartSVGFullname\s*=\s*f?[\"']{1}.*?\\{.*?}[\"']{1}",
-            lambda m: "chartSVGFullname = os.path.join(location, f\"{chartSVGfilename}.svg\")",
-            content
-        )
+def patch_chart_path_issues():
+    # List of files to patch
+    base_dir = os.path.dirname(jyotichart.__file__)
+    files_to_patch = [
+        os.path.join(base_dir, "northindianchart.py"),
+        os.path.join(base_dir, "northindian_transitchart.py"),
+        os.path.join(base_dir, "southindianchart.py"),
+    ]
+    # Regex to match all chartSVGFullname assignments that use backslashes or manual path logic
+    pattern = re.compile(
+        r'''chartSVGFullname\s*=\s*f?['"]\{location\}(?:\\|/)?\{chartSVGfilename\}\.svg['"]|'''
+        r'''chartSVGFullname\s*=\s*f?['"]\{location\}\\\{chartSVGfilename\}\.svg['"]|'''
+        r'''chartSVGFullname\s*=\s*f?['"]\{location\}/\{chartSVGfilename\}\.svg['"]|'''
+        r'''chartSVGFullname\s*=\s*f?['"]\{location\}\{chartSVGfilename\}\.svg['"]'''
+    )
+    for file_path in files_to_patch:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            # Replace all manual path constructions with os.path.join
+            new_content = re.sub(
+                r'if\s*\(\s*\(location\[-1\]\s*==\s*["\']\\\\["\']\s*\)\s*\|\|\s*\(location\[-1\]\s*==\s*["\']/["\']\s*\)\s*\):\s*\n\s*chartSVGFullname\s*=\s*f?[\'"]\{location\}\{chartSVGfilename\}\.svg[\'"]\s*\n\s*elif\s*\(["\']/["\']\s*in\s*location\):\s*\n\s*chartSVGFullname\s*=\s*f?[\'"]\{location\}/\{chartSVGfilename\}\.svg[\'"]\s*\n\s*else:\s*\n\s*chartSVGFullname\s*=\s*f?[\'"]\{location\}\\\{chartSVGfilename\}\.svg[\'"]',
+                'chartSVGFullname = os.path.join(location, f"{chartSVGfilename}.svg")',
+                content,
+                flags=re.MULTILINE
+            )
+            # Also patch any single-line assignments
+            new_content = re.sub(
+                pattern,
+                'chartSVGFullname = os.path.join(location, f"{chartSVGfilename}.svg")',
+                new_content
+            )
+            if new_content != content:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(new_content)
+                print(f"✅ Patched path issue in {os.path.basename(file_path)}")
+            else:
+                print(f"ℹ️ No patch needed in {os.path.basename(file_path)}")
+        except Exception as e:
+            print(f"⚠️ Failed to patch {file_path}: {e}")
 
-        if new_content != content:
-            with open(init_file, "w", encoding="utf-8") as f:
-                f.write(new_content)
-            print("✅ Patched jyotichart path issue in __init__.py")
-        else:
-            print("ℹ️ No patch needed; already correct")
-    except Exception as e:
-        print(f"⚠️ Failed to patch jyotichart: {e}")
-
-patch_jyotichart_svg_path()
-importlib.reload(jyotichart)  # Reload so patch applies
+# Run the patch before importing jyotichart
+patch_chart_path_issues()
+import importlib
+import jyotichart
+importlib.reload(jyotichart)
 
 
 #------------------------------ CLEARING FOLDER -------------------------
