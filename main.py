@@ -26,6 +26,8 @@ from astro_core.shadbala import compute_shadbala
 from astro_core.ashtakavarga import Ashtakavarga, OSUN, OMOON, OMERCURY, OVENUS, OMARS, OJUPITER, OSATURN, OASCENDANT, REKHA
 from astro_core.progression import compute_progressed_chart, get_sign_number, get_sign_labels as get_sign_labels_prog
 
+#------------------------------ DICTIONARIES -------------------------
+
 
 
 
@@ -144,31 +146,8 @@ def ashtakavarga_rekha_table(ashta, planet_labels, sign_labels):
     df.loc[len(df)] = sarva
     return df
 
-# def sarva_ashtakavarga_svg_chart(sarva, sign_labels, asc_sign_num, name, folder, filename):
-#     import jyotichart
-#     importlib.reload(jyotichart)
-#     chart = jyotichart.SouthChart("Sarva Ashtakavarga Chart", name, IsFullChart=True)
 
-#     chart.add_planet("Sun", "", 1)
-
-#     for sign_num in range(1, 13):
-#         value = sarva[sign_num - 1]
-#         chart.add_planet(f"Sarva{sign_num}", str(value), sign_num, colour="black")
-
-#     chart.set_ascendantsign(sign_labels[asc_sign_num])
-#     house_colors = ["white"] * 12
-
-#     chart.updatechartcfg(
-#         aspect=False,              
-#         clr_background="white",    
-#         clr_outbox="black",        
-#         clr_line="black",         
-#         clr_Asc="darkblue",        
-#         clr_houses=house_colors    
-#     )
-
-#     chart.draw(folder, filename, "svg")
-
+#-------------------- RENDERING---------------------------
 if submitted:
     charts_folder = "charts"
     name_safe = name.replace(" ", "_")
@@ -176,87 +155,75 @@ if submitted:
 
     # --- TAB 1: Wait for files and display ---
     with tabs[0]:
-        required_files = [
-            f"{charts_folder}/D1_Rāśi_{name_safe}.svg",
-            f"{charts_folder}/D9_Navamsa_{name_safe}.svg",
-            f"{charts_folder}/planetary_info_telugu_{name_safe}.csv",
-        ]
-        with st.spinner("Generating charts, please wait..."):
-            files_ready = wait_for_files(required_files, timeout=5, poll_interval=0.5)
-        if not files_ready:
-            st.error("Timeout: Charts are not ready yet. Please try again later.")
+        # ----------------- Panchangam -----------------------------
+        panchang_path = f"{charts_folder}/panchang_details_{name_safe}.csv"
+        if os.path.exists(panchang_path):
+            st.markdown("## 🗓️ పంచాంగం")
+            df_panchang = pd.read_csv(panchang_path)
+            st.dataframe(df_panchang, use_container_width=True, hide_index=True)
         else:
-            # ----------------- Panchangam -----------------------------
-            panchang_path = f"{charts_folder}/panchang_details_{name_safe}.csv"
-            if os.path.exists(panchang_path):
-                st.markdown("## 🗓️ పంచాంగం (Panchangam)")
-                df_panchang = pd.read_csv(panchang_path)
-                st.dataframe(df_panchang, use_container_width=True, hide_index=True)
-            else:
-                st.warning("Panchangam info not found.")
+            st.warning("Panchangam info not found.")
 
-
-            # ------------------ D1 & D9 Charts ------------------------
-            st.markdown("## 📊 D1 & D9 Charts")
-            d_charts = [
-                ("D1_Rāśi", "D1 (రాశి)"),
-                ("D9_Navamsa", "D9 (నవాంశం)")
-            ]
-            cols = st.columns(2)
-            for (chart_key, label), col in zip(d_charts, cols):
-                chart_path = f"{charts_folder}/{chart_key}_{name_safe}.svg"
-                if os.path.exists(chart_path):
-                    with open(chart_path, "rb") as f:
-                        svg_bytes = f.read()
+        # ------------------ D1 & D9 Charts ------------------------
+        st.markdown("## D1 & D9 Charts")
+        d_charts = [
+            ("D1_Rāśi", "D1 (రాశి)"),
+            ("D9_Navamsa", "D9 (నవాంశ)")
+        ]
+        cols = st.columns(2)
+        for (chart_key, label), col in zip(d_charts, cols):
+            chart_path = f"{charts_folder}/{chart_key}_{name_safe}.svg"
+            if os.path.exists(chart_path):
+                with open(chart_path, "rb") as f:
+                    svg_bytes = f.read()
                     b64 = base64.b64encode(svg_bytes).decode()
-                    with col:
-                        st.markdown(f"### {label}")
-                        html(
-                            f'<embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="100%" height="500">',
-                            height=550
-                        )
-                else:
-                    with col:
-                        st.error(f"Missing chart: {os.path.basename(chart_path)}")
-
-
-            # ---------------------- Planetary Info Table ------------------------
-            planetary_csv = f"{charts_folder}/planetary_info_telugu_{name_safe}.csv"
-            if os.path.exists(planetary_csv):
-                st.markdown("## గ్రహ స్థితి పట్టిక (Planetary Positions)")
-                df_planets = pd.read_csv(planetary_csv)
-                st.dataframe(df_planets, height=500, hide_index=True)
+                with col:
+                    st.markdown(f"### {label}")
+                    html(
+                        f'<embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="100%" height="500">',
+                        height=550
+                    )
             else:
-                st.warning("Planetary info not found.")
-
-            # -------------------- Dasha Tables in 3x3 Grid -------------------------
-            st.markdown("## వింశోత్తరి దశా పట్టికలు (Vimshottari Dasha Tables)")
-
-            def extract_start_date(csv_path):
-                try:
-                    df = pd.read_csv(csv_path)
-                    if not df.empty:
-                        return dt.strptime(df.iloc[0]["ప్రారమ్భం"], "%d-%m-%Y")
-                except Exception as e:
-                    print(f"Error parsing {csv_path}: {e}")
-                return dt.max  
-
-            dasha_files = [
-                f for f in os.listdir(charts_folder)
-                if f.startswith("dasha_") and f.endswith(f"{name_safe}.csv")
-            ]
-
-            dasha_files.sort(key=lambda x: extract_start_date(os.path.join(charts_folder, x)))
+                with col:
+                    st.error(f"Missing chart: {os.path.basename(chart_path)}")
 
 
-            rows = [dasha_files[i:i+3] for i in range(0, len(dasha_files), 3)]
-            for row in rows:
-                cols = st.columns(3)
-                for col, file in zip(cols, row):
-                    df = pd.read_csv(os.path.join(charts_folder, file))
-                    maha_name = file.split("_")[1]
-                    col.markdown(f"**{maha_name} మహాదశ**")
-                    col.dataframe(df, use_container_width=True, hide_index=True)
+        # ---------------------- Planetary Info Table ------------------------
+        planetary_csv = f"{charts_folder}/planetary_info_telugu_{name_safe}.csv"
+        if os.path.exists(planetary_csv):
+            st.markdown("## గ్రహ స్థితి")
+            df_planets = pd.read_csv(planetary_csv)
+            st.dataframe(df_planets, height=500, hide_index=True)
+        else:
+            st.warning("Planetary info not found.")
+
+        # -------------------- Dasha Tables in 3x3 Grid -------------------------
+        st.markdown("## వింశోత్తరి దశ")
+        def extract_start_date(csv_path):
+            try:
+                df = pd.read_csv(csv_path)
+                if not df.empty:
+                    return dt.strptime(df.iloc[0]["ప్రారంభం"], "%d-%m-%Y")
+            except Exception as e:
+                print(f"Error parsing {csv_path}: {e}")
+            return dt.max  
+
+        dasha_files = [
+            f for f in os.listdir(charts_folder)
+            if f.startswith("dasha_") and f.endswith(f"{name_safe}.csv")
+        ]
+
+        dasha_files.sort(key=lambda x: extract_start_date(os.path.join(charts_folder, x)))
+
+
+        rows = [dasha_files[i:i+3] for i in range(0, len(dasha_files), 3)]
+        for row in rows:
+            cols = st.columns(3)
+            for col, file in zip(cols, row):
+                df = pd.read_csv(os.path.join(charts_folder, file))
+                maha_name = file.split("_")[1]
+                col.markdown(f"**{maha_name} మహాదశ**")
+                col.dataframe(df, use_container_width=True, hide_index=True)
 
 
         #------------------- TABS 1 -------------------------------------
@@ -283,7 +250,7 @@ if submitted:
                             b64 = base64.b64encode(f.read()).decode()
                         with cols[j]:
                             parts = chart_files[i + j].replace(".svg", "").split("_")
-                            label = " ".join(parts[:-1])  # Removes client name like "Vamsi"
+                            label = " ".join(parts[:-1])
                             st.markdown(f"### {label}")
                             html(f'<embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="100%" height="500">', height=550)
 
@@ -295,9 +262,27 @@ if submitted:
             # --- Rekha Table ---
             rekha_csv = f"{charts_folder}/rekha_table_{name_safe}.csv"
             if os.path.exists(rekha_csv):
-                st.markdown("## 🧮 Binna Ashtakavarga Rekha Table")
+                st.markdown("## Binna Ashtakavarga Rekha Table")
                 df_rekha = pd.read_csv(rekha_csv)
                 st.dataframe(df_rekha, use_container_width=True)
+
+            # --- Sarva Chart ---
+            sarva_svg = f"{charts_folder}/Sarva_{name_safe}.svg"
+            if os.path.exists(sarva_svg):
+                st.markdown("## Sarva Ashtakavarga Chart")
+                with open(sarva_svg, "r", encoding="utf-8") as f:
+                    svg_text = f.read()
+                b64 = base64.b64encode(svg_text.encode("utf-8")).decode()
+                st.components.v1.html(
+                    f'''
+                    <div style="text-align:center;">
+                        <embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="980" height="700" />
+                    </div>
+                    ''',
+                    height=720
+                )
+            else:
+                st.warning("Sarva chart not found.")
 
 
 
@@ -311,23 +296,30 @@ if submitted:
             panchang = get_panchang_minimal(jd, lat, lon, tz)
 
             st.markdown("## 🗓️ పంచాంగం (Panchang)")
-            panchang_df = pd.DataFrame([
-                {"Property": "Nakshatram", "Value": str(panchang["Nakshatram"])},
-                {"Property": "Padam", "Value": str(panchang["Padam"])},
-                {"Property": "Rasi", "Value": str(panchang["Rasi"])},
-                {"Property": "Vaaram", "Value": str(panchang["Vaaram"])}
-            ])
+            if language == "Telugu":
+                panchang_df = pd.DataFrame([
+                    {"గుణము": "నక్షత్రం", "విలువ": str(panchang["Nakshatram"])},
+                    {"గుణము": "పదం", "విలువ": str(panchang["Padam"])},
+                    {"గుణము": "రాశి", "విలువ": str(panchang["Rasi"])},
+                    {"గుణము": "వారం", "విలువ": str(panchang["Vaaram"])}
+                ])
+            else:
+                panchang_df = pd.DataFrame([
+                    {"Property": "Nakshatram", "Value": str(panchang["Nakshatram"])},
+                    {"Property": "Padam", "Value": str(panchang["Padam"])},
+                    {"Property": "Rasi", "Value": str(panchang["Rasi"])},
+                    {"Property": "Vaaram", "Value": str(panchang["Vaaram"])}
+                ])
             st.table(panchang_df)
             panchang_df.to_csv(f"{charts_folder}/panchang_details_{name_safe}.csv", index=False)
 
-            
 
             # ---------------------------------- DIV CHARTS -------------------------------------
 
             varga_list = [
                 (1, "D1 (Rāśi)"), (2, "D2 (Hora)"), (3, "D3 (Drekkana)"), (4, "D4 (Chaturthamsha)"),
                 (7, "D7 (Saptamsha)"), (9, "D9 (Navamsa)"), (10, "D10 (Dashamsha)"), (12, "D12 (Dwadashamsha)"),
-                (16, "D16 (Shodashamsha)"), (20, "D20 (Vimshamsha)"), (27, "D27 (Bhamsha)"), (30, "D30 (Trimsamsha)"),
+                (16, "D16 (Shodashamsha)"), (20, "D20 (Vimshamsha)"), (24, "D24 (Chaturvimshamsha)"), (27, "D27 (Bhamsha)"), (30, "D30 (Trimsamsha)"),
                 (40, "D40 (Khavedamsha)"), (45, "D45 (Akshavedamsha)"), (60, "D60 (Shastiamsa)")
             ]
 
@@ -418,36 +410,43 @@ if submitted:
                     ashta = Ashtakavarga(get_rasi)
                     ashta.update()
 
-                    # --- Build full planets_in_sign for Ashtakavarga chart (Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, Rahu, Ketu, Ascendant) ---
+                    # Build planets_in_sign dict
                     planet_labels = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Ascendant"]
                     ashta_planets_in_sign = {i: [] for i in range(1, 13)}
-                    # Sun–Saturn, Ascendant
                     for idx, planet in enumerate(planet_labels):
                         sign_num = get_rasi(idx) + 1
                         ashta_planets_in_sign[sign_num].append(planet)
-                    # Rahu/Ketu from D1 chart
                     for sign_num, planets in planets_in_sign.items():
                         for planet in planets:
-                            if planet == "Rahu" or planet == "Ketu":
+                            if planet in ("Rahu", "Ketu"):
                                 ashta_planets_in_sign[sign_num].append(planet)
 
-
-
-
-
-
-                    # --- Rekha Table and Sarva Ashtakavarga Chart ---
+                    # Rekha Table
                     planet_labels_table = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"]
                     sign_labels_row = [sign_labels[i + 1] for i in range(12)]  # 1-based
-
                     rekha_df = ashtakavarga_rekha_table(ashta, planet_labels_table, sign_labels_row)
                     rekha_df.to_csv(f"{charts_folder}/rekha_table_{name}.csv", index=False)
+
                     st.markdown("#### Rekha Table (Binna Ashtakavarga)")
                     st.dataframe(rekha_df, use_container_width=True)
 
-                    # ➕ Sarva Ashtakavarga South Indian Chart (with Rekha values)
+                    # Sarva Ashtakavarga values (as list of 12 ints)
                     sarva = [sum(ashta.getItem(REKHA, pidx, rasi) for pidx in range(7)) for rasi in range(12)]
 
+                    from sarva_chart_generator import draw_south_chart_with_sarva, SIGN_NAMES
+                    sarva_dict = dict(zip(SIGN_NAMES, sarva))
+
+                    name_safe = name.replace(" ", "_")  # ✅ Ensure it's defined
+                    sarva_svg_path = draw_south_chart_with_sarva(sarva_dict, filename=f"Sarva_{name_safe}")
+
+                    st.markdown("#### Sarva Ashtakavarga Chart")
+                    with open(sarva_svg_path, "r", encoding="utf-8") as f:
+                        svg_text = f.read()
+                    b64 = base64.b64encode(svg_text.encode("utf-8")).decode()
+                    st.components.v1.html(
+                        f'<embed type="image/svg+xml" src="data:image/svg+xml;base64,{b64}" width="980" height="700">',
+                        height=700
+                    )
 
 
 

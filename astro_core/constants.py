@@ -103,3 +103,25 @@ RASI_LORDS = {
     7: "Venus", 8: "Mars", 9: "Jupiter", 10: "Saturn", 11: "Saturn", 12: "Jupiter"
 }
 
+
+
+
+# Column headers and other terms
+TELUGU_HEADERS = {
+    "Planet": "గ్రహం",
+    "Degrees": "డిగ్రీలు",
+    "Sign": "రాశి",
+    "Sign Lord": "రాశి అధిపతి",
+    "Nakshatram": "నక్షత్రం",
+    "Pada": "పదం",
+    "Retrograde": "వక్రగతి",
+    "Ascendant": "లగ్నం",
+    "Start": "ప్రారంభం",
+    "End": "ముగింపు",
+    "Antardasha": "అంతర్దశ",
+    "Mahadasha": "మహాదశ",
+    "Panchang": "పంచాంగం",
+    "Chart": "చార్ట్",
+    "Rekha Table": "రేఖ పట్టిక",
+    "Sarva": "సర్వ",
+}
